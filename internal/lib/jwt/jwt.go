@@ -105,16 +105,17 @@ func GetGUID(accessToken string) []byte {
 }
 
 
-func CheckIP(newIP string, accessToken string) error {
-	accesstoken, _ := jwt.Parse(accessToken, func(token *jwt.Token) (any, error) {
-		return []byte(os.Getenv("SECRET_FOR_ACCESS")), nil
+func CheckIP(newIP string, refreshToken string) error {
+	refreshtoken, _ := jwt.Parse(refreshToken, func(token *jwt.Token) (any, error) {
+		return []byte(os.Getenv("SECRET_FOR_REFRESH")), nil
 	})
 
-	accessClaims := accesstoken.Claims.(jwt.MapClaims)
+	accessClaims := refreshtoken.Claims.(jwt.MapClaims)
 	accessIp := accessClaims["ip"].(string)
 
 	if newIP != accessIp {
 		fmt.Println("ip changed")
+		return fmt.Errorf("ip changed")
 		//
 	}
 

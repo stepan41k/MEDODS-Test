@@ -41,6 +41,16 @@ func (as *AuthService) Create(ctx context.Context, guid []byte, ip string) (stri
 		slog.String("guid", string(guid)),
 	)
 
+	oldRefresh, err := as.auth.GetRefresh(ctx, guid)
+	if err != nil {
+		return "", fmt.Errorf("%s: %w", op, err)
+	}
+
+	err = jwt.CheckIP(ip, oldRefresh)
+	if err != nil {
+		return "", fmt.Errorf("%s: %w", op, err)
+	}
+
 	newKey := uuid.NewString()
 
 	accessToken, err := jwt.NewAccesssTokens(string(guid), newKey, ip)

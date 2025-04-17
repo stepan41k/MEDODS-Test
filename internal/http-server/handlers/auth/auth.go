@@ -57,6 +57,7 @@ func (ah *AuthHandler) Create(ctx context.Context) http.HandlerFunc {
 		}
 
 		ip := r.RemoteAddr
+
 		accessCookie, err := cookie.TakeCookie(w, r)
 		if accessCookie != "" || err == nil {
 			log.Error("tokens already created")
