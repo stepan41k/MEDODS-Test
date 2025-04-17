@@ -113,6 +113,8 @@ func CheckIP(newIP string, refreshToken string) error {
 	accessClaims := refreshtoken.Claims.(jwt.MapClaims)
 	accessIp := accessClaims["ip"].(string)
 
+	fmt.Println(newIP, accessIp)
+
 	if newIP != accessIp {
 		fmt.Println("ip changed")
 		return fmt.Errorf("ip changed")

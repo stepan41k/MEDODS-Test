@@ -7,6 +7,7 @@ import (
 	"log/slog"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v4"
 	"github.com/stepan41k/MEDODS-Test/internal/lib/jwt"
 	"github.com/stepan41k/MEDODS-Test/internal/storage"
 )
@@ -43,12 +44,19 @@ func (as *AuthService) Create(ctx context.Context, guid []byte, ip string) (stri
 
 	oldRefresh, err := as.auth.GetRefresh(ctx, guid)
 	if err != nil {
-		return "", fmt.Errorf("%s: %w", op, err)
+		if errors.Is(err, pgx.ErrNoRows) {
+			//
+		} else {
+			return "", fmt.Errorf("%s: %w", op, err)
+		}
+		
 	}
 
-	err = jwt.CheckIP(ip, oldRefresh)
-	if err != nil {
-		return "", fmt.Errorf("%s: %w", op, err)
+	if oldRefresh != "" {
+		err = jwt.CheckIP(ip, oldRefresh)
+		if err != nil {
+			return "", fmt.Errorf("%s: %w", op, err)
+		}
 	}
 
 	newKey := uuid.NewString()
@@ -98,6 +106,11 @@ func (as *AuthService) Refresh(ctx context.Context, ip string, accessCookie stri
 
 		return "", fmt.Errorf("%s: %w", op, err)
 	}
+
+	err = jwt.CheckIP(ip, refreshToken)
+		if err != nil {
+			return "", fmt.Errorf("%s: %w", op, err)
+		}
 
 	flag, err := jwt.CheckRefresh(refreshToken) 
 	if err != nil || !flag  {
