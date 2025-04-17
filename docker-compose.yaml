@@ -1,0 +1,19 @@
+version: "3.0"
+
+services:
+  medods-auth-app:
+    build: ./
+    command: ./wait-for-postgres.sh pgsql ./medods-auth-app
+    ports:
+      - 8020:8020
+    depends_on:
+      - pgsql
+    environment:
+      - DB_PASSWORD=password12345
+  pgsql:
+    restart: always
+    image: postgres:latest
+    environment:
+      - POSTGRES_PASSWORD=password12345
+    ports:
+      - 5444:5432
