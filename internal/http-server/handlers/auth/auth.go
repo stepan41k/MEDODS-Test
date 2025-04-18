@@ -46,17 +46,15 @@ func (ah *AuthHandler) Create(ctx context.Context) http.HandlerFunc {
 		if guid == "" {
 			log.Warn("guid is empty")
 
-			render.Status(r, http.StatusConflict)
+			render.Status(r, http.StatusBadRequest)
 
 			render.JSON(w, r, resp.ErrorResponse{
-				Status: http.StatusConflict,
-				Error: "invalid request",
+				Status: http.StatusBadRequest,
+				Error: "GUID is empty",
 			})
 
 			return
 		}
-
-		ip := r.RemoteAddr
 
 		accessCookie, err := cookie.TakeCookie(w, r)
 		if accessCookie != "" || err == nil {
@@ -71,6 +69,8 @@ func (ah *AuthHandler) Create(ctx context.Context) http.HandlerFunc {
 
 			return 
 		}
+
+		ip := r.RemoteAddr
 
 		token, err := ah.auth.Create(ctx, []byte(guid), ip)
 		if err != nil {
@@ -89,10 +89,10 @@ func (ah *AuthHandler) Create(ctx context.Context) http.HandlerFunc {
 
 			log.Error("failed to create tokens", sl.Err(err))
 
-			render.Status(r, http.StatusBadRequest)
+			render.Status(r, http.StatusInternalServerError)
 
 			render.JSON(w, r, resp.ErrorResponse{
-				Status: http.StatusBadRequest,
+				Status: http.StatusInternalServerError,
 				Error: "failed to create tokens",
 			})
 
@@ -129,7 +129,7 @@ func (ah *AuthHandler) Refresh(ctx context.Context) http.HandlerFunc {
 			if errors.Is(err, cookie.ErrCookieNotSet) {
 				log.Error("token not set", sl.Err(cookie.ErrCookieNotSet))
 
-				render.Status(r, http.StatusBadRequest)
+				render.Status(r, http.StatusUnauthorized)
 
 				render.JSON(w, r, resp.ErrorResponse{
 					Status: http.StatusUnauthorized,
@@ -141,10 +141,10 @@ func (ah *AuthHandler) Refresh(ctx context.Context) http.HandlerFunc {
 
 			log.Error("failed to take cookie", sl.Err(err))
 
-			render.Status(r, http.StatusBadRequest)
+			render.Status(r, http.StatusInternalServerError)
 
 			render.JSON(w, r, resp.ErrorResponse{
-				Status: http.StatusBadRequest,
+				Status: http.StatusInternalServerError,
 				Error: "failed to take cookie",
 			})
 
@@ -157,10 +157,10 @@ func (ah *AuthHandler) Refresh(ctx context.Context) http.HandlerFunc {
 		if err != nil {
 			log.Error("failed to refresh tokens", sl.Err(err))
 
-			render.Status(r, http.StatusBadRequest)
+			render.Status(r, http.StatusInternalServerError)
 
 			render.JSON(w, r, resp.ErrorResponse{
-				Status: http.StatusBadRequest,
+				Status: http.StatusInternalServerError,
 				Error: "failed to refresh tokens",
 			})
 

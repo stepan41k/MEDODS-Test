@@ -8,17 +8,17 @@ import (
 	"os/signal"
 	"syscall"
 
-	userHandler "github.com/stepan41k/MEDODS-Test/internal/http-server/handlers/user"
-	authHandler "github.com/stepan41k/MEDODS-Test/internal/http-server/handlers/auth"
-	authService "github.com/stepan41k/MEDODS-Test/internal/service/auth"
-	userService "github.com/stepan41k/MEDODS-Test/internal/service/user"	
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
 	"github.com/stepan41k/MEDODS-Test/cmd/migrator"
 	"github.com/stepan41k/MEDODS-Test/internal/app"
 	"github.com/stepan41k/MEDODS-Test/internal/config"
-	"github.com/stepan41k/MEDODS-Test/internal/storage/postgres"
+	authHandler "github.com/stepan41k/MEDODS-Test/internal/http-server/handlers/auth"
 	"github.com/stepan41k/MEDODS-Test/internal/http-server/handlers/logout"
+	userHandler "github.com/stepan41k/MEDODS-Test/internal/http-server/handlers/user"
+	authService "github.com/stepan41k/MEDODS-Test/internal/service/auth"
+	userService "github.com/stepan41k/MEDODS-Test/internal/service/user"
+	"github.com/stepan41k/MEDODS-Test/internal/storage/postgres"
 )
 
 
@@ -52,7 +52,9 @@ func main() {
 	authService, userService := authService.New(log, pool), userService.New(log, pool)
 	authHandler, userHandler := authHandler.New(log, authService), userHandler.New(log, userService)
 
-	migrator.NewMigration("postgres://postgres:password12345@pgsql:5432/postgres?sslmode=disable", os.Getenv("MIGRATIONS_PATH"))
+	storagePathMigrate := fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=%s", cfg.Storage.Username, os.Getenv("PG_DB_PASSWORD"), cfg.Storage.Host, cfg.Storage.Port, cfg.Storage.DBName, cfg.Storage.SSLMode)
+
+	migrator.NewMigration(storagePathMigrate, os.Getenv("MIGRATIONS_PATH"))
 
 	router.Route("/user", func(r chi.Router) {
 		r.Post("/new", userHandler.CreateUser(context.Background()))

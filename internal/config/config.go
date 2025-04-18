@@ -10,9 +10,9 @@ import (
 )
 
 type Config struct {
-	Env         string     `yaml:"env" env-default:"local"`
-	Server      HTTPServer `yaml:"http_server"`
-	Storage     DataBase   `yaml:"db"`
+	Env     string     `yaml:"env" env-default:"local"`
+	Server  HTTPServer `yaml:"http_server"`
+	Storage DataBase   `yaml:"db"`
 }
 
 type HTTPServer struct {
@@ -25,11 +25,9 @@ type DataBase struct {
 	Host     string `yaml:"host"`
 	Port     string `yaml:"port"`
 	Username string `yaml:"username"`
-	Password string
 	DBName   string `yaml:"dbname"`
 	SSLMode  string `yaml:"sslmode"`
 }
-
 
 func MustLoad() *Config {
 	if err := godotenv.Load(); err != nil {

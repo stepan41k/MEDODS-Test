@@ -2,7 +2,6 @@ package jwt
 
 import (
 	"errors"
-	"fmt"
 	"os"
 	"time"
 
@@ -13,11 +12,17 @@ import (
 const (
 	accessDuration = 15 * time.Minute
 	refreshDuration =  43200 * time.Minute
-	diffDuration = 2591100
 )
 
 var (
 	ErrUserUnauthorized = errors.New("user unauthorized")
+	ErrTokensDontMatch = errors.New("tokens dont match")
+	ErrNewIp = errors.New("expected change of ip")
+)
+
+var (
+	accessSecret = os.Getenv("SECRET_FOR_ACCESS")
+	refreshSecret = os.Getenv("SECRET_FOR_REFRESH")
 )
 
 
@@ -26,11 +31,10 @@ func NewAccesssTokens(guid string, key string, ip string) (string, error) {
 
 	claims := accessToken.Claims.(jwt.MapClaims)
 	claims["guid"] = guid
-	claims["ip"] = ip
 	claims["key"] = key
 	claims["exp"] = time.Now().Add(accessDuration).Unix()
 
-	accessTokenString, err := accessToken.SignedString([]byte(os.Getenv("SECRET_FOR_ACCESS")))
+	accessTokenString, err := accessToken.SignedString([]byte(accessSecret))
 	if err != nil {
 		return "", err
 	}
@@ -47,7 +51,7 @@ func NewRefreshToken(key string, ip string) (string, error) {
 	claims["key"] = key
 	claims["exp"] = time.Now().Add(refreshDuration).Unix()
 
-	refreshTokenString, err := refreshToken.SignedString([]byte(os.Getenv("SECRET_FOR_REFRESH")))
+	refreshTokenString, err := refreshToken.SignedString([]byte(refreshSecret))
 	if err != nil {
 		return "", err
 	}
@@ -58,18 +62,18 @@ func NewRefreshToken(key string, ip string) (string, error) {
 
 func CheckMatching(accessToken string, refreshToken string) (bool, error) {
 	accesstoken, _ := jwt.Parse(accessToken, func(token *jwt.Token) (any, error) {
-		return []byte(os.Getenv("SECRET_FOR_ACCESS")), nil
+		return []byte(accessSecret), nil
 	})
 
 	refreshtoken, _ := jwt.Parse(refreshToken, func(token *jwt.Token) (any, error) {
-		return []byte(os.Getenv("SECRET_FOR_REFRESH")), nil
+		return []byte(refreshSecret), nil
 	})
 
 	accessClaims := accesstoken.Claims.(jwt.MapClaims)
 	refreshClaims := refreshtoken.Claims.(jwt.MapClaims)
 
 	if accessClaims["key"].(string) != refreshClaims["key"].(string) {
-		return false, fmt.Errorf("tokens dont match")
+		return false, ErrTokensDontMatch
 	}
 
 	return true, nil
@@ -78,7 +82,7 @@ func CheckMatching(accessToken string, refreshToken string) (bool, error) {
 
 func CheckRefresh(refreshToken string) (bool, error) {
 	refreshtoken, err := jwt.Parse(refreshToken, func(token *jwt.Token) (any, error) {
-		return []byte(os.Getenv("SECRET_FOR_REFRESH")), nil
+		return []byte(refreshSecret), nil
 	})
 
 	if err != nil {
@@ -95,7 +99,7 @@ func CheckRefresh(refreshToken string) (bool, error) {
 
 func GetGUID(accessToken string) []byte {
 	accesstoken, _ := jwt.Parse(string(accessToken), func(token *jwt.Token) (any, error) {
-		return []byte(os.Getenv("SECRET_FOR_ACCESS")), nil
+		return []byte(accessSecret), nil
 	})
 
 	claims := accesstoken.Claims.(jwt.MapClaims)
@@ -107,18 +111,14 @@ func GetGUID(accessToken string) []byte {
 
 func CheckIP(newIP string, refreshToken string) error {
 	refreshtoken, _ := jwt.Parse(refreshToken, func(token *jwt.Token) (any, error) {
-		return []byte(os.Getenv("SECRET_FOR_REFRESH")), nil
+		return []byte(refreshSecret), nil
 	})
 
 	accessClaims := refreshtoken.Claims.(jwt.MapClaims)
-	accessIp := accessClaims["ip"].(string)
+	oldIP := accessClaims["ip"].(string)
 
-	fmt.Println(newIP, accessIp)
-
-	if newIP != accessIp {
-		fmt.Println("ip changed")
-		return fmt.Errorf("ip changed")
-		//
+	if newIP != oldIP {
+		return ErrNewIp
 	}
 
 	return nil

@@ -31,12 +31,12 @@ func (s *Storage) CreateUser(ctx context.Context, guid []byte) ([]byte, error) {
 		RETURNING guid;
 	`, guid)
 
-	var nguid []byte
+	var rguid []byte
 
-	err = row.Scan(&nguid)
+	err = row.Scan(&rguid)
 	if err != nil {
 		return nil, fmt.Errorf("%s: %w", op, err)
 	}
 
-	return nguid, nil
+	return rguid, nil
 }

@@ -39,12 +39,12 @@ func (uh *UserHandler) CreateUser(ctx context.Context) http.HandlerFunc {
 
 		guid, err := uh.user.CreateUser(ctx)
 		if err != nil {
-			log.Warn("failed to create user", sl.Err(err))
+			log.Error("failed to create user", sl.Err(err))
 
-			render.Status(r, http.StatusConflict)
+			render.Status(r, http.StatusBadRequest)
 
 			render.JSON(w, r, resp.ErrorResponse{
-				Status: http.StatusConflict,
+				Status: http.StatusBadRequest,
 				Error: "failed to create user",
 			})
 

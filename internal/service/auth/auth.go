@@ -2,6 +2,7 @@ package auth
 
 import (
 	"context"
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -9,6 +10,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v4"
 	"github.com/stepan41k/MEDODS-Test/internal/lib/jwt"
+	"github.com/stepan41k/MEDODS-Test/internal/lib/sl"
 	"github.com/stepan41k/MEDODS-Test/internal/storage"
 )
 
@@ -45,17 +47,22 @@ func (as *AuthService) Create(ctx context.Context, guid []byte, ip string) (stri
 	oldRefresh, err := as.auth.GetRefresh(ctx, guid)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			//
+			// continue
 		} else {
 			return "", fmt.Errorf("%s: %w", op, err)
 		}
-		
 	}
 
 	if oldRefresh != "" {
 		err = jwt.CheckIP(ip, oldRefresh)
 		if err != nil {
-			return "", fmt.Errorf("%s: %w", op, err)
+			if errors.Is(err, jwt.ErrNewIp) {
+				log.Warn("ip was changed")
+
+				// there could be a call to the message sending function
+			} else {
+				return "", fmt.Errorf("%s: %w", op, err)
+			}
 		}
 	}
 
@@ -75,10 +82,16 @@ func (as *AuthService) Create(ctx context.Context, guid []byte, ip string) (stri
 		return "", fmt.Errorf("%s: %w", op, err)
 	}
 
-	if err := as.auth.Create(ctx, guid, []byte(refreshToken)); err != nil {
+	cryptRefreshToken := base64.StdEncoding.EncodeToString([]byte(refreshToken))
+
+	if err := as.auth.Create(ctx, guid, []byte(cryptRefreshToken)); err != nil {
 		if errors.Is(err, storage.ErrUserNotFound) {
+			log.Error("user not found")
+
 			return "", fmt.Errorf("%s: %w", op, ErrUserNotFound)
 		}
+		log.Error("failed to insert token", sl.Err(err))
+
 		return "", fmt.Errorf("%s: %w", op, err)
 	}
 
@@ -100,19 +113,34 @@ func (as *AuthService) Refresh(ctx context.Context, ip string, accessCookie stri
 
 	newKey := uuid.NewString()
 
-	refreshToken, err := as.auth.GetRefresh(ctx, guid)
+	cryptRefreshToken, err := as.auth.GetRefresh(ctx, guid)
 	if err != nil {
 		log.Error("failed to get refresh token")
 
 		return "", fmt.Errorf("%s: %w", op, err)
 	}
 
-	err = jwt.CheckIP(ip, refreshToken)
-		if err != nil {
+	refreshToken, err := base64.StdEncoding.DecodeString(cryptRefreshToken)
+	if err != nil {
+		log.Error("failed to decode refresh token")
+
+		return "", fmt.Errorf("%s: %w", op, err)
+	}
+
+	err = jwt.CheckIP(ip, string(refreshToken))
+	if err != nil {
+		if errors.Is(err, jwt.ErrNewIp) {
+			log.Warn("ip was changed")
+
+			//there could be a call to the message sending function
+		} else {
+			log.Error("failed to check IP")
+
 			return "", fmt.Errorf("%s: %w", op, err)
 		}
+	}
 
-	flag, err := jwt.CheckRefresh(refreshToken) 
+	flag, err := jwt.CheckRefresh(string(refreshToken)) 
 	if err != nil || !flag  {
 		log.Error("failed to check refresh token")
 
@@ -132,9 +160,13 @@ func (as *AuthService) Refresh(ctx context.Context, ip string, accessCookie stri
 		return "", fmt.Errorf("%s: %w", op, err)
 	}
 
+	cryptRefreshToken = base64.StdEncoding.EncodeToString([]byte(newRefresh))
+
 	log.Info("create new tokens")
 
-	if err = as.auth.Create(ctx, guid, []byte(newRefresh)); err != nil {
+	if err = as.auth.Create(ctx, guid, []byte(cryptRefreshToken)); err != nil {
+		log.Error("failed to insert token")
+
 		return "", fmt.Errorf("%s: %w", op, err)
 	}
 
