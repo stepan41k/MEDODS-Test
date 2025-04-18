@@ -16,9 +16,9 @@ Description of the endpoints:
 
 Auxiliary endpoints (for manual testing): 
 
-"/auth/logout" - снимает HTTP-Only cookie\
+"/auth/logout" - снимает HTTP-Only cookie
 
-"/user/new" - генерирует GUID и добавляет его в БД\ 
+"/user/new" - генерирует GUID и добавляет его в БД
 
 
 Также реализовано 5 функциональных тестов
