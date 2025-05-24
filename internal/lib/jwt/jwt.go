@@ -79,6 +79,27 @@ func CheckMatching(accessToken string, refreshToken string) (bool, error) {
 	return true, nil
 }
 
+func CheckAccess(accessToken string, refreshToken string) (bool, error) {
+	accesstoken, err := jwt.Parse(accessToken, func(token *jwt.Token) (any, error) {
+		return []byte(accessSecret), nil
+	})
+
+	if err != nil {
+		return false, err
+	}
+
+	if !accesstoken.Valid {
+		flag, err := CheckRefresh(refreshToken)
+
+		if err != nil || !flag {
+			return false, ErrUserUnauthorized
+		}
+	
+		return true, nil
+	}
+
+	return true, nil
+}
 
 func CheckRefresh(refreshToken string) (bool, error) {
 	refreshtoken, err := jwt.Parse(refreshToken, func(token *jwt.Token) (any, error) {

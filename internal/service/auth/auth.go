@@ -140,7 +140,7 @@ func (as *AuthService) Refresh(ctx context.Context, ip string, accessCookie stri
 		}
 	}
 
-	flag, err := jwt.CheckRefresh(string(refreshToken)) 
+	flag, err := jwt.CheckAccess(accessCookie, string(refreshToken)) 
 	if err != nil || !flag  {
 		log.Error("failed to check refresh token")
 
